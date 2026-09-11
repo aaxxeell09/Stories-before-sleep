@@ -1,0 +1,441 @@
+{
+  "child": {
+    "name": "{{child_name}}",
+    "age": "{{child_age}}",
+    "interests": ["{{interest_1}}", "{{interest_2}}"]
+  },
+
+  "lesson": "{{what_parent_wants_to_teach}}",
+
+  "preferences": {
+    "read_time_minutes": "{{2|5|8}}",
+    "rhyming": "{{true|false}}",
+    "tone": "{{gentle|silly|adventurous|bedtime}}",
+    "theme": "{{theme_or_auto}}",
+    "story_style": ["{{repetition|interactive_questions|default}}"],
+    "vocabulary": "{{auto|simpler|advanced}}"
+  },
+
+  "characters": [
+    {
+      "name": "{{character_name}}",
+      "personality": "{{character_personality}}",
+      "visual_description": "{{canonical_visual_description_or_null}}",
+      "reference_image": "{{reference_image_id_or_null}}"
+    }
+  ],
+
+  "previous_context": "{{relevant_previous_adventures_or_null}}",
+
+  "storybook_settings": {
+    "illustration_style": "{{canonical_storybook_style}}",
+    "width_px": 1440,
+    "height_px": 900,
+    "aspect_ratio": "16:10",
+    "orientation": "landscape",
+    "target_age_range": "2-4"
+  },
+
+  "instructions": {
+    "goal": "Create all structured information required to generate the complete illustrated storybook directly from the parent's input.",
+
+    "pipeline": [
+      "Generate the complete story internally.",
+      "Separate the main story from post-story educational sections.",
+      "Convert only the main story into storybook pages.",
+      "Create one illustration specification for every page.",
+      "Create and maintain canonical visual identities for recurring characters, objects, locations, and illustration style.",
+      "Return the complete page plan and one ready-to-use image generation payload for every page."
+    ],
+
+    "story_generation": {
+      "supported_age_range": "2-4",
+      "optimize_for_exact_child_age": true,
+
+      "follow_story_arc": [
+        "context",
+        "problem",
+        "development",
+        "learning_moment",
+        "resolution"
+      ],
+
+      "personalization": {
+        "use_child_interests_naturally": true,
+        "make_interests_relevant_to_story_events": true,
+        "use_theme_naturally": true,
+        "connect_lesson_to_situations_the_child_can_understand": true,
+        "avoid_forced_or_cosmetic_personalization": true,
+        "do_not_force_child_name_into_story": true,
+        "do_not_force_child_to_be_a_character": true
+      },
+
+      "storytelling": {
+        "preserve_character_personalities": true,
+        "preserve_previous_story_continuity_when_relevant": true,
+        "teach_through_story_events": true,
+        "show_consequences_and_learning_through_character_actions": true,
+        "let_character_discover_lesson_through_experience": true,
+        "avoid_preachy_or_didactic_language": true,
+        "keep_story_gentle_and_emotionally_safe": true,
+        "use_dialogue_naturally": true,
+        "use_repetition_when_requested": true
+      },
+
+      "interactivity": {
+        "include_interactive_questions_when_requested": true,
+        "max_interactive_questions": 3,
+        "make_questions_flow_naturally_from_story_events": true,
+        "avoid_questions_that_feel_like_a_quiz": true
+      },
+
+      "length": {
+        "respect_requested_read_time": true,
+        "target_word_counts": {
+          "2_minutes": "200-300 words",
+          "5_minutes": "500-700 words",
+          "8_minutes": "800-1000 words"
+        }
+      },
+
+      "lesson_delivery": {
+        "focus_on_one_primary_lesson": true,
+        "avoid_secondary_morals": true,
+        "teach_mainly_through_story_events": true,
+        "include_only_one_moral_at_end": true
+      }
+    },
+
+    "story_boundaries": {
+      "internally_generate_what_we_learned": true,
+      "internally_generate_try_it_today": true,
+      "do_not_convert_what_we_learned_into_story_pages": true,
+      "do_not_convert_try_it_today_into_story_pages": true,
+      "do_not_use_post_story_sections_for_image_generation": true
+    },
+
+    "page_planning": {
+      "determine_appropriate_page_count": true,
+
+      "recommended_ranges": {
+        "2_minutes": "4-6 pages",
+        "5_minutes": "7-10 pages",
+        "8_minutes": "10-14 pages"
+      },
+
+      "prioritize_natural_story_rhythm_over_exact_page_count": true,
+      "create_one_clear_story_moment_per_page": true,
+      "place_page_breaks_at_natural_story_transitions": true,
+      "avoid_overloaded_pages": true,
+      "avoid_unnecessarily_short_pages": true,
+      "do_not_create_new_story_events_to_fill_pages": true
+    },
+
+    "text_distribution": {
+      "once_story_is_generated_lock_story_text": true,
+      "preserve_generated_story_wording_exactly_when_splitting_into_pages": true,
+      "do_not_rewrite_between_story_generation_and_page_planning": true,
+      "do_not_paraphrase": true,
+      "do_not_summarize": true,
+      "do_not_add_new_narration": true,
+      "do_not_add_new_dialogue": true,
+      "preserve_dialogue_exactly": true,
+      "preserve_interactive_questions_exactly": true,
+      "preserve_repetition_exactly": true,
+      "preserve_punctuation": true,
+      "do_not_repeat_text_across_pages": true
+    },
+
+    "visual_bible": {
+      "create_before_page_illustration_prompts": true,
+
+      "characters": {
+        "create_canonical_visual_description_when_missing": true,
+        "respect_existing_visual_description_when_provided": true,
+        "respect_reference_images_when_provided": true,
+        "lock_species": true,
+        "lock_age_and_body_proportions": true,
+        "lock_face_and_distinguishing_features": true,
+        "lock_colors": true,
+        "lock_clothing_and_accessories": true,
+        "do_not_redesign_between_pages": true
+      },
+
+      "recurring_objects": {
+        "identify_story_important_recurring_objects": true,
+        "assign_stable_visual_properties": true,
+        "preserve_color_shape_size_and_distinguishing_features": true
+      },
+
+      "locations": {
+        "identify_recurring_locations": true,
+        "establish_persistent_environment_details": true,
+        "preserve_layout_when_same_location_continues": true
+      },
+
+      "style": {
+        "use_requested_illustration_style": true,
+        "establish_one_canonical_storybook_style": true,
+        "keep_rendering_consistent_across_all_pages": true,
+        "low_visual_stimulation": true,
+        "simple_preschool_friendly_composition": true
+      }
+    },
+
+    "image_planning": {
+      "create_one_image_specification_per_page": true,
+      "derive_each_image_from_that_page_only": true,
+      "select_one_specific_visual_moment": true,
+      "match_character_actions_and_emotions_to_page_text": true,
+      "include_relevant_story_objects": true,
+      "include_relevant_location_details": true,
+      "do_not_show_future_events": true,
+      "do_not_add_new_story_events": true,
+      "do_not_add_unnecessary_characters": true,
+      "avoid_visualizing_every_sentence": true,
+      "prioritize_clear_visual_storytelling": true
+    },
+
+    "cross_page_continuity": {
+      "process_pages_in_sequential_order": true,
+      "page_n_can_use_visual_context_from_page_n_minus_1": true,
+      "preserve_character_identity_across_every_page": true,
+      "preserve_recurring_object_properties": true,
+      "preserve_location_continuity": true,
+      "preserve_environment_layout_when_location_is_unchanged": true,
+      "only_change_character_emotion_pose_or_action_when_story_requires_it": true
+    },
+
+    "image_generation_payloads": {
+      "generate_ready_to_use_payload_for_each_page": true,
+      "each_payload_must_be_self_contained": true,
+
+      "canvas": {
+        "width_px": 1440,
+        "height_px": 900,
+        "aspect_ratio": "16:10",
+        "orientation": "landscape",
+        "compose_natively_for_target_dimensions": true,
+        "do_not_crop_from_other_aspect_ratio": true
+      },
+
+      "character_consistency": {
+        "include_canonical_character_descriptions_in_every_relevant_page_payload": true,
+        "include_reference_image_ids_when_available": true,
+        "include_page_specific_emotion_and_action": true
+      },
+
+      "continuity": {
+        "include_current_location": true,
+        "include_important_recurring_objects": true,
+        "include_persistent_environment_details": true,
+        "include_previous_page_visual_context": true
+      },
+
+      "text_rendering": {
+        "use_only_page_text": true,
+        "copy_narration_exactly": true,
+        "copy_dialogue_exactly": true,
+        "do_not_invent_text": true,
+        "do_not_include_speaker_names_inside_bubbles": true,
+        "render_each_dialogue_item_in_own_bubble": true,
+        "associate_bubble_with_correct_speaker": true,
+        "do_not_cover_faces_actions_or_important_objects": true,
+        "large_preschool_friendly_typography": true,
+        "high_contrast": true
+      }
+    },
+
+    "quality_control": {
+      "verify_before_returning": true,
+
+      "checks": [
+        "Every part of the generated main story appears exactly once across the pages.",
+        "No post-story educational content appears inside storybook pages.",
+        "Every page represents one clear visual moment.",
+        "Every page has enough information to generate its illustration without rereading the full story.",
+        "Character visual identity is consistent across every page.",
+        "Recurring objects retain the same visual properties.",
+        "Locations remain visually consistent when unchanged.",
+        "No page illustration reveals a future event.",
+        "No image payload invents narration or dialogue.",
+        "Narration and dialogue in image payloads exactly match the corresponding page.",
+        "Every page image payload uses the same canonical illustration style.",
+        "Every image payload targets exactly 1440x900 in 16:10 landscape."
+      ]
+    }
+  },
+
+  "output_format": {
+    "format": "json",
+
+    "story": {
+      "title": "{{generated_story_title}}",
+      "full_story_text": "{{complete_main_story_only}}",
+      "what_we_learned": "{{one_or_two_short_sentences}}",
+      "try_it_today": "{{simple_age_appropriate_activity}}"
+    },
+
+    "visual_bible": {
+      "illustration_style": "{{canonical_storybook_style}}",
+
+      "characters": [
+        {
+          "name": "{{character_name}}",
+          "personality": "{{character_personality}}",
+          "canonical_visual_description": "{{complete_locked_visual_description}}",
+          "reference_image": "{{reference_image_id_or_null}}"
+        }
+      ],
+
+      "recurring_objects": [
+        {
+          "name": "{{object_name}}",
+          "canonical_visual_description": "{{stable_visual_properties}}"
+        }
+      ],
+
+      "locations": [
+        {
+          "name": "{{location_name}}",
+          "canonical_visual_description": "{{stable_environment_description}}"
+        }
+      ]
+    },
+
+    "pages": [
+      {
+        "page_number": "{{integer}}",
+
+        "story_moment": "{{context|problem|development|learning_moment|resolution}}",
+
+        "purpose": "{{short_page_purpose}}",
+
+        "narration": "{{exact_page_narration_or_null}}",
+
+        "dialogue": [
+          {
+            "speaker": "{{character_name}}",
+            "text": "{{exact_dialogue_text}}",
+            "emotion": "{{emotion}}"
+          }
+        ],
+
+        "image_description": "{{single_specific_visual_moment}}",
+
+        "characters_on_page": [
+          {
+            "name": "{{character_name}}",
+            "emotion": "{{page_specific_emotion}}",
+            "action": "{{page_specific_action}}"
+          }
+        ],
+
+        "visual_continuity": {
+          "location": "{{location_name}}",
+
+          "important_objects": [
+            "{{object_with_locked_visual_properties}}"
+          ],
+
+          "persistent_environment_details": [
+            "{{environment_detail}}"
+          ],
+
+          "previous_page_context": "{{short_visual_context_or_null}}"
+        },
+
+        "image_generation_payload": {
+          "page": {
+            "page_number": "{{same_page_number}}",
+            "image_description": "{{same_image_description}}",
+            "narration": "{{same_narration_or_null}}",
+            "dialogue": [
+              {
+                "speaker": "{{character_name}}",
+                "text": "{{exact_dialogue_text}}"
+              }
+            ],
+            "story_moment": "{{same_story_moment}}"
+          },
+
+          "characters": [
+            {
+              "name": "{{character_name}}",
+              "visual_description": "{{canonical_visual_description_from_visual_bible}}",
+              "reference_image": "{{reference_image_id_or_null}}",
+              "emotion_on_page": "{{page_specific_emotion}}",
+              "action_on_page": "{{page_specific_action}}"
+            }
+          ],
+
+          "visual_continuity": {
+            "location": "{{current_location_with_canonical_visual_description}}",
+            "important_objects": [
+              "{{recurring_object_with_canonical_visual_properties}}"
+            ],
+            "previous_page_context": "{{previous_page_visual_context_or_null}}",
+            "persistent_environment_details": [
+              "{{persistent_environment_detail}}"
+            ]
+          },
+
+          "image_output": {
+            "width_px": 1440,
+            "height_px": 900,
+            "aspect_ratio": "16:10",
+            "orientation": "landscape",
+            "exact_dimensions_required": true,
+            "compose_natively_for_target_dimensions": true
+          },
+
+          "style": {
+            "illustration_style": "{{canonical_storybook_style}}",
+            "stimulation": "low",
+            "target_age": "2-4",
+            "visual_complexity": "simple",
+            "emotional_tone": "{{page_emotional_tone}}"
+          },
+
+          "composition": {
+            "primary_focus": "{{main_character_or_action}}",
+            "text_layout": "auto",
+            "keep_text_areas_visually_simple": true,
+            "clear_character_silhouettes": true,
+            "avoid_crowded_backgrounds": true,
+            "prioritize_story_action": true,
+            "keep_important_content_inside_safe_area": true
+          },
+
+          "instructions": [
+            "Generate exactly this storybook page.",
+            "Show one clear visual moment from the page.",
+            "Do not introduce story events that are not present on this page.",
+            "Do not reveal future events.",
+            "Preserve all canonical character visual properties.",
+            "Preserve recurring objects and locations exactly as established in the visual bible.",
+            "Use the reference image as the primary character identity reference when available.",
+            "Maintain the same illustration style as every other page.",
+            "Use only the supplied narration and dialogue as rendered text.",
+            "Copy all rendered text exactly.",
+            "Never put speaker names inside speech bubbles.",
+            "Do not add contextual captions or additional text.",
+            "Keep speech bubbles associated with the correct character.",
+            "Do not place text over faces, important actions, or important objects.",
+            "Compose natively for exactly 1440x900 pixels in 16:10 landscape."
+          ]
+        }
+      }
+    ],
+
+    "instructions": [
+      "Return valid JSON only.",
+      "Do not return markdown or commentary.",
+      "Return the complete storybook generation package in a single response.",
+      "The pages array must be ordered sequentially starting at page 1.",
+      "Every page must contain its own complete image_generation_payload.",
+      "Do not require a separate story-to-pages transformation after this output.",
+      "The image_generation_payload of each page must be directly usable as input for an image generation step."
+    ]
+  }
+}

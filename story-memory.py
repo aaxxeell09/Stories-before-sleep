@@ -17,7 +17,7 @@ ROOT = Path(__file__).resolve().parent
 
 def settings():
     values = {}
-    for line in (ROOT / ".env").read_text().splitlines():
+    for line in ((ROOT / ".env").read_text() if (ROOT / ".env").exists() else "").splitlines():
         if line.strip() and not line.lstrip().startswith("#") and "=" in line:
             key, value = line.split("=", 1)
             values[key.strip()] = value.strip().strip("\"'")
@@ -212,6 +212,7 @@ async def run(args, values):
     if not report["verified"]:
         raise RuntimeError("Transfer not verified: no matching memory returned from HydraDB.")
     print("VERIFIED: the transfer ID, lesson, and evidence were retrieved independently from HydraDB.")
+    return json.loads(redact(json.dumps(report), values))
 
 
 if __name__ == "__main__":

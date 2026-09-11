@@ -1,0 +1,11 @@
+{
+  "child": {"name": "Milo", "age": 3, "interests": ["sea animals", "building sandcastles"]},
+  "lesson": "Taking turns with a favorite toy",
+  "preferences": {"read_time_minutes": 2, "rhyming": false, "tone": "gentle", "theme": "the seaside", "story_style": ["default"], "vocabulary": "auto"},
+  "characters": [
+    {"name": "Clownfish", "personality": "Curious and enthusiastic", "visual_description": "A small orange clownfish with three white stripes edged in black and round kind eyes", "reference_image": null},
+    {"name": "Squid", "personality": "Patient and playful", "visual_description": "A small lavender squid with a rounded head, short tentacles and warm brown eyes", "reference_image": null}
+  ],
+  "previous_context": null,
+  "storybook_settings": {"illustration_style": "Soft watercolor with warm pastel colors and simple backgrounds"}
+}

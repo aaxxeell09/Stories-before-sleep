@@ -9,7 +9,7 @@ parent feedback and uses it to improve future stories.
 The initial audience is parents of children ages **2–4**. The experience is
 parent-led: the parent chooses the lesson, reads the story, and decides what
 worked. The sections below describe the intended product; the current
-implementation is a small command-line prototype.
+implementation includes a local Python web UI and command-line prototypes.
 
 ## The end-to-end experience
 
@@ -81,9 +81,9 @@ Local profile storage alone does not satisfy the full hackathon architecture.
   this is separate from the script's explicit profile persistence.
 
 The current pipeline is **webhook input → OpenAI model → answer output**.
-It does not yet generate structured books or illustrations, provide a browser
-reader or page editing, learn from parent feedback, or use the planned memory
-and analytics services. The placeholder prompts are intentionally easy to replace.
+The original text pipeline does not provide page editing or learn from parent
+feedback. The web UI also supports the structured illustrated-book pipeline
+described below; analytics and automatic memory-informed generation remain planned.
 
 Narration, animated page turns, quizzes, media recommendations, and advanced
 learning analytics are outside the initial product scope.
@@ -184,3 +184,88 @@ returned `Hello from RocketRide!` using a real model call. Local checks also
 cover SDK compatibility, pipeline wiring, and profile defaults, updates, and
 persistence after a simulated model failure. The full product experience and
 planned sponsor integrations are not yet implemented or verified.
+
+## Local web UI
+
+Start the UI with Python 3.10 or newer (no extra web framework required):
+
+```sh
+python3 web_app.py
+```
+
+Open http://127.0.0.1:8000. Use `--port 8001` to choose another port.
+The server binds only to loopback and is intended for one local user.
+
+- **Create a story:** choose a lesson, age, reading time, characters, and rhyme.
+  Enable **Illustrate each page** for a saved storybook with page images (ages
+  2–4), or disable it for text only. Download the story as text. The saved age
+  is shared with the CLI. Text-only stories clear on refresh; illustrated books
+  are persisted and can be reopened from **Saved books**.
+- **Read an example:** explore the reader without API keys. It is explicitly
+  labeled sample content, not an AI generation.
+- **Story memory:** optionally ingest pasted text into Cognee, recall a story,
+  extract its lesson, and store it in HydraDB. Success requires the existing
+  independent readback verification. Reports are saved under `data/`.
+
+For live operations, install `requirements.txt` and configure `.env` as above,
+then launch the server with `.venv/bin/python web_app.py`. Generation needs the
+three RocketRide settings; memory also needs the Cognee and HydraDB settings.
+Environment variables override `.env`. Keys stay on the server. The status
+message checks configuration presence, not service connectivity.
+
+One service operation runs at a time. Memory jobs may take several minutes;
+keep the page open until completion. Reloading loses the browser's job handle,
+but does not cancel an active operation. Server restarts clear job status.
+A failed or timed-out transfer may already have written remote data; inspect
+`data/` and your services before retrying. The UI does not yet repair pages
+or apply recalled memories to new stories.
+
+Local checks (mocked service calls; no API credits used):
+
+```sh
+python3 -m unittest discover -s tests -v
+node --check web/app.js
+```
+
+### Illustrated books and output from another worktree
+
+`illustrated_story.py`, `illustrated-story.pipe`, the two prompt templates,
+and `scripts/prepare_image_queries.py` incorporate the image pipeline from the
+image-generation worktree without replacing the existing text CLI or pipe.
+The UI builds a request from the current form, generates the structured story,
+then retrieves images sequentially. It opens the completed book automatically.
+The image model, native sizing, final 1440×900 PNGs, and reference continuity
+follow that pipeline. Live model access is required and has not been verified
+by the UI's offline tests.
+
+New UI books are saved under `data/books/<run-id>/`. The reader uses
+`storybook.json` for narration, dialogue and lessons, and `manifest.json` for
+ordered final page images. Prompts, native images and run settings are not
+served to the browser. **Saved books → Refresh** discovers new or partially
+finished books. Reopen a partial book to see newly completed images.
+
+To include books generated in another worktree, point the server at its output
+folder (or at one individual book folder):
+
+```sh
+.venv/bin/python web_app.py --books-dir /Users/terenceyip/.codex/worktrees/3b29/Stories-before-sleep/output
+```
+
+This directory is read-only to the UI; generation from this UI always writes
+into this checkout's `data/books/`. The directory can be absent at startup.
+Use the other worktree's CLI as usual, then refresh Saved books here. Repeat
+`--books-dir` to include additional output folders. No copy or symlink is needed.
+Only folders containing `storybook.json` are listed; arbitrary local files and
+manifest paths escaping the book directory are rejected.
+
+Illustrated generation may take several minutes and makes paid image calls.
+Partial results survive an error. The UI does not retry image calls automatically.
+The imported CLI supports resuming with the original request and settings:
+
+```sh
+.venv/bin/python illustrated_story.py --request examples/story-request.json --output data/books/my-book
+# If needed, rerun that exact command with --resume.
+```
+
+For image calls, `OPENAI_API_KEY` is used when set; otherwise the runner uses
+`ROCKETRIDE_OPENAI_KEY`. Character reference uploads remain a CLI feature.
