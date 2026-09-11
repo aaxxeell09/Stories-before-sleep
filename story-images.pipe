@@ -1,0 +1,30 @@
+{
+  "project_id": "4d295f56-8e83-4f8a-aec5-f3bb9086e316",
+  "version": 1,
+  "source": "input",
+  "components": [
+    {
+      "id": "input",
+      "provider": "webhook",
+      "config": {"hideForm": true, "mode": "Source", "parameters": {}, "type": "webhook"}
+    },
+    {
+      "id": "openai_images",
+      "provider": "tool_http_request",
+      "config": {
+        "type": "tool_http_request",
+        "serverName": "openai_images",
+        "allowGET": false,
+        "allowPOST": true,
+        "allowPUT": false,
+        "allowPATCH": false,
+        "allowDELETE": false,
+        "allowHEAD": false,
+        "allowOPTIONS": false,
+        "urlWhitelist": [{"whitelistPattern": "^https://api\\.openai\\.com/v1/responses$"}],
+        "maxConcurrentRequests": 1
+      },
+      "control": [{"classType": "tool", "from": "input"}]
+    }
+  ]
+}

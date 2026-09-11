@@ -269,3 +269,19 @@ The imported CLI supports resuming with the original request and settings:
 
 For image calls, `OPENAI_API_KEY` is used when set; otherwise the runner uses
 `ROCKETRIDE_OPENAI_KEY`. Character reference uploads remain a CLI feature.
+
+Image generation now runs through `story-images.pipe`: the runner invokes
+RocketRide's HTTP tool, which sends an OpenAI Responses API request with a forced
+image-generation tool. The pipe allows only POST requests to that endpoint.
+The runtime needs `tool_http_request` and direct SDK tool dispatch support.
+Character references and the previous page are supplied as image inputs; returned
+image bytes are saved and resized locally. No local OpenAI SDK call is made.
+
+Add `--max-pages 1` for a single-image preview. The story remains complete, while
+the manifest records `preview_complete` if only some page images were requested.
+Resuming also supports run files created before this option existed.
+
+Provider errors now retain their code, message and request ID in the manifest,
+with API keys redacted. Live testing generated a story and confirmed that image
+requests reach OpenAI through RocketRide, but image retrieval remains unverified:
+the tested organization returned HTTP 429 with a zero image-model rate limit.

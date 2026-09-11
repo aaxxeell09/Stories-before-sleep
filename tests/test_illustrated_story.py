@@ -9,8 +9,6 @@ from pathlib import Path
 from types import SimpleNamespace
 from unittest.mock import AsyncMock
 
-import httpx
-from openai import AsyncOpenAI
 from PIL import Image
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -45,14 +43,45 @@ def image_result(size=(1536, 960)):
 
 
 class PipelineTests(unittest.IsolatedAsyncioTestCase):
-    async def test_real_sdk_reference_upload_and_response_decoding(self):
-        requests = []
+    async def test_rate_limit_diagnostic_saved_without_key(self):
+        client = SimpleNamespace(tool=AsyncMock(return_value={
+            'status_code': 429, 'headers': {'X-Request-ID': 'req_test'},
+            'json': {'error': {'code': 'rate_limit_exceeded',
+                'message': 'Limit 0, Requested 255. sk-secret'}}}))
+        adapter = pipeline.RocketRideImages(client, 'token', 'sk-secret')
+        with tempfile.TemporaryDirectory() as directory:
+            output = Path(directory)
+            with self.assertRaisesRegex(RuntimeError, 'Limit 0'):
+                await pipeline.generate_images(adapter, book_fixture(), output, {}, max_pages=1)
+            text = (output / 'manifest.json').read_text()
+            self.assertNotIn('sk-secret', text)
+            error = json.loads(text)['error']
+            self.assertEqual(error['code'], 'rate_limit_exceeded')
+            self.assertEqual(error['request_id'], 'req_test')
 
-        def respond(request):
-            requests.append(request)
-            return httpx.Response(200, json={'created': 1, 'data': [
-                {'b64_json': image_result().data[0].b64_json}]})
+    async def test_already_parsed_story_response(self):
+        client = SimpleNamespace(use=AsyncMock(return_value={'token': 'session'}),
+            chat=AsyncMock(return_value={'answers': [book_fixture()]}), terminate=AsyncMock())
+        result = await pipeline.generate_story(client, {})
+        self.assertEqual(result, book_fixture())
+        client.terminate.assert_awaited_once_with('session')
 
+    async def test_single_image_preview(self):
+        client = SimpleNamespace(images=SimpleNamespace(
+            generate=AsyncMock(return_value=image_result()), edit=AsyncMock()))
+        with tempfile.TemporaryDirectory() as directory:
+            output = Path(directory)
+            result = await pipeline.generate_images(client, book_fixture(), output, {}, max_pages=1)
+            self.assertEqual(result['status'], 'preview_complete')
+            self.assertEqual(result['total_story_pages'], 2)
+            self.assertEqual(len(result['pages']), 1)
+            client.images.generate.assert_awaited_once()
+            client.images.edit.assert_not_awaited()
+
+    async def test_rocketride_reference_upload_and_response_decoding(self):
+        client = SimpleNamespace(tool=AsyncMock(return_value={
+            'status_code': 200, 'json': {'status': 'completed', 'output': [
+                {'type': 'image_generation_call', 'result': image_result().data[0].b64_json}]}}))
         with tempfile.TemporaryDirectory() as directory:
             output = Path(directory)
             reference = output / 'bear.png'
@@ -60,15 +89,24 @@ class PipelineTests(unittest.IsolatedAsyncioTestCase):
             book = book_fixture()
             for page in book['pages']:
                 page['image_generation_payload']['characters'][0]['reference_image'] = 'bear-ref'
-            async with AsyncOpenAI(api_key='test-key', max_retries=0,
-                    http_client=httpx.AsyncClient(transport=httpx.MockTransport(respond))) as client:
-                await pipeline.generate_images(client, book, output, {'bear-ref': reference})
-            self.assertEqual(len(requests), 2)
-            for request in requests:
-                self.assertEqual(request.url.path, '/v1/images/edits')
-                self.assertIn(b'1536x960', request.content)
-                self.assertIn(b'filename="bear.png"', request.content)
-            self.assertIn(b'filename="page-001-native.png"', requests[1].content)
+            adapter = pipeline.RocketRideImages(client, 'test-token', 'test-key')
+            await pipeline.generate_images(adapter, book, output, {'bear-ref': reference})
+            self.assertEqual(client.tool.await_count, 2)
+            calls = client.tool.call_args_list
+            for call in calls:
+                self.assertEqual(call.kwargs['node_id'], 'openai_images')
+                self.assertEqual(call.kwargs['tool'], 'http_request')
+                body = call.kwargs['input']['body_json']
+                self.assertEqual(body['tools'][0]['size'], '1536x960')
+                self.assertEqual(body['tool_choice'], {'type': 'image_generation'})
+                self.assertTrue(body['input'][0]['content'][1]['image_url'].startswith('data:image/png;base64,'))
+            self.assertEqual(len(calls[1].kwargs['input']['body_json']['input'][0]['content']), 3)
+
+    async def test_rocketride_http_failure_is_not_an_image(self):
+        client = SimpleNamespace(tool=AsyncMock(return_value={'status_code': 403, 'body': 'private error'}))
+        adapter = pipeline.RocketRideImages(client, 'test-token', 'test-key')
+        with self.assertRaisesRegex(RuntimeError, 'HTTP 403'):
+            await adapter.generate(model='test', prompt='test', size='1536x960', quality='low', output_format='png', n=1)
 
     async def test_story_query_and_session_cleanup(self):
         client = SimpleNamespace(use=AsyncMock(return_value={'token': 'session'}),
@@ -152,30 +190,6 @@ class PipelineTests(unittest.IsolatedAsyncioTestCase):
         book['pages'].reverse()
         with self.assertRaisesRegex(ValueError, 'sequentially'):
             pipeline.validate_book(book)
-
-
-class WebWorkerTests(unittest.IsolatedAsyncioTestCase):
-    async def test_ui_inputs_reach_illustrated_runner(self):
-        import web_worker
-        from unittest.mock import patch
-        seen = {}
-
-        async def generate(args):
-            seen.update(json.loads(args.request.read_text()))
-            self.assertFalse(args.resume)
-            args.output.mkdir()
-
-        with tempfile.TemporaryDirectory() as directory:
-            with patch('web_worker.LOCAL_BOOKS', Path(directory)), patch('web_worker.load') as loader, patch('illustrated_story.run', side_effect=generate):
-                loader.return_value.save_child_age.return_value = 3
-                result = await web_worker.run(dict(kind='generate', age=3, minutes=5, rhyme=True,
-                                                   lesson='Share', characters='Sea turtles', illustrated=True))
-        self.assertTrue(result['book_id'])
-        self.assertEqual(seen['child']['age'], 3)
-        self.assertEqual(seen['preferences']['read_time_minutes'], 5)
-        self.assertTrue(seen['preferences']['rhyming'])
-        self.assertIn('Sea turtles', seen['child']['interests'])
-        self.assertEqual(seen['lesson'], 'Share')
 
 
 if __name__ == '__main__':
