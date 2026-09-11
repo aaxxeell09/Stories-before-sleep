@@ -9,7 +9,7 @@ parent feedback and uses it to improve future stories.
 The initial audience is parents of children ages **2–4**. The experience is
 parent-led: the parent chooses the lesson, reads the story, and decides what
 worked. The sections below describe the intended product; the current
-implementation is a small command-line prototype.
+implementation includes a local Python web UI and command-line prototypes.
 
 ## The end-to-end experience
 
@@ -81,8 +81,7 @@ Local profile storage alone does not satisfy the full hackathon architecture.
   this is separate from the script's explicit profile persistence.
 
 The current pipeline is **webhook input → OpenAI model → answer output**.
-It does not yet generate structured books or illustrations, provide a browser
-reader or page editing, learn from parent feedback, or use the planned memory
+It does not yet generate structured books or illustrations, provide page editing, learn from parent feedback, or use the planned memory
 and analytics services. The placeholder prompts are intentionally easy to replace.
 
 Narration, animated page turns, quizzes, media recommendations, and advanced
@@ -184,3 +183,43 @@ returned `Hello from RocketRide!` using a real model call. Local checks also
 cover SDK compatibility, pipeline wiring, and profile defaults, updates, and
 persistence after a simulated model failure. The full product experience and
 planned sponsor integrations are not yet implemented or verified.
+
+## Local web UI
+
+Start the UI with Python 3.10 or newer (no extra web framework required):
+
+```sh
+python3 web_app.py
+```
+
+Open http://127.0.0.1:8000. Use `--port 8001` to choose another port.
+The server binds only to loopback and is intended for one local user.
+
+- **Create a story:** choose a lesson, age, reading time, characters, and rhyme.
+  Read the result and download it as a text file. The saved age is shared with
+  the CLI. Stories stay in the browser until downloaded; refreshing clears them.
+- **Read an example:** explore the reader without API keys. It is explicitly
+  labeled sample content, not an AI generation.
+- **Story memory:** optionally ingest pasted text into Cognee, recall a story,
+  extract its lesson, and store it in HydraDB. Success requires the existing
+  independent readback verification. Reports are saved under `data/`.
+
+For live operations, install `requirements.txt` and configure `.env` as above,
+then launch the server with `.venv/bin/python web_app.py`. Generation needs the
+three RocketRide settings; memory also needs the Cognee and HydraDB settings.
+Environment variables override `.env`. Keys stay on the server. The status
+message checks configuration presence, not service connectivity.
+
+One service operation runs at a time. Memory jobs may take several minutes;
+keep the page open until completion. Reloading loses the browser's job handle,
+but does not cancel an active operation. Server restarts clear job status.
+A failed or timed-out transfer may already have written remote data; inspect
+`data/` and your services before retrying. The UI does not yet generate
+illustrations, repair pages, or apply recalled memories to new stories.
+
+Local checks (mocked service calls; no API credits used):
+
+```sh
+python3 -m unittest discover -s tests -v
+node --check web/app.js
+```
