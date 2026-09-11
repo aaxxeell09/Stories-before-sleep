@@ -40,3 +40,7 @@ Once Cognee has processed the story, omit `--seed-story` to avoid ingesting it a
 Each run uses a new Hydra collection named `story-transfer-…`, so readback cannot accidentally confirm an earlier run. Successful readback prints `VERIFIED` and saves a report in the ignored `data/` folder. These runs make real API calls and persist test data in both services; the script does not delete it.
 
 An empty or unprocessed Cognee dataset cannot supply a story. Tool failures stop the transfer. If processing is still running or an API rate limit is reached, wait and retry without `--seed-story` after checking that the original ingestion succeeded. A write acknowledgment alone does not count as verified storage.
+
+## Verified sample
+
+The September 11, 2026 live test retrieved `Pip and Luna Take Turns` from Cognee dataset `storybook-transfer-demo`, saved it through RocketRide to Hydra database `default-tenant`, collection `story-transfer-9af608224a20`, and independently read back the exact transfer ID, lesson, and quote. The lesson was “taking turns lets everyone enjoy playing together.” The report is `data/story-transfer-9af608224a20.json` (local and ignored by Git).

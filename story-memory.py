@@ -62,6 +62,20 @@ def parsed_answer(response):
     return answer
 
 
+def verified_readback(readback, collection, transfer_id, lesson, evidence):
+    meta = readback.get("meta") or {}
+    if not readback.get("success") or (meta.get("collection") or meta.get("sub_tenant_id")) != collection:
+        return False
+    for chunk in (readback.get("data") or {}).get("chunks", []):
+        try:
+            record = json.loads(chunk.get("chunk_content") or "")
+        except (ValueError, TypeError):
+            continue
+        if isinstance(record, dict) and record.get("transfer_id") == transfer_id and record.get("lesson") == lesson and record.get("evidence") == evidence:
+            return True
+    return False
+
+
 async def run(args, values):
     transfer_id = "story-transfer-" + uuid4().hex[:12]
     collection = transfer_id  # Isolate readback from previous test results.
@@ -182,11 +196,7 @@ async def run(args, values):
         readback = result.model_dump(mode="json")
         report["hydra_readback"] = readback
         # Only matching content from the isolated collection can verify this run.
-        data = readback.get("data") or {}
-        chunks = data.get("chunks") or []
-        if any(transfer_id in (chunk.get("chunk_content") or "")
-               and (chunk.get("collection") or chunk.get("sub_tenant_id")) == collection
-               for chunk in chunks):
+        if verified_readback(readback, collection, transfer_id, parsed["lesson"], parsed["evidence"]):
             report["verified"] = True
             break
         if attempt < 35:
@@ -201,7 +211,7 @@ async def run(args, values):
     print(f"Report: {output}", flush=True)
     if not report["verified"]:
         raise RuntimeError("Transfer not verified: no matching memory returned from HydraDB.")
-    print("VERIFIED: the transfer marker was retrieved independently from HydraDB.")
+    print("VERIFIED: the transfer ID, lesson, and evidence were retrieved independently from HydraDB.")
 
 
 if __name__ == "__main__":
