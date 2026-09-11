@@ -12,12 +12,12 @@ from contextlib import ExitStack
 from pathlib import Path
 
 from dotenv import load_dotenv
-from openai import AsyncOpenAI
 from PIL import Image
 from rocketride import RocketRideClient
 from rocketride.schema import Question
 
 from scripts.prepare_image_queries import build_image_queries
+from scripts.rocketride_images import RocketRideImages
 
 
 ROOT = Path(__file__).resolve().parent
@@ -54,7 +54,7 @@ def make_story_prompt(request):
     return prompt
 
 
-async def generate_story(client, prompt):
+async def generate_story(client, prompt, response_path=None):
     question = Question(expectJson=True)
     question.addInstruction("Response", "Return the complete storybook package as valid JSON only. No markdown.")
     question.addQuestion(json.dumps(prompt, ensure_ascii=False))
@@ -62,9 +62,15 @@ async def generate_story(client, prompt):
     token = started["token"]
     try:
         response = await client.chat(token=token, question=question)
+        if response_path is not None:
+            save_json(response_path, response)
         answers = response.get("answers")
-        if not isinstance(answers, list) or len(answers) != 1 or not isinstance(answers[0], str):
+        if not isinstance(answers, list) or len(answers) != 1:
             raise ValueError("RocketRide must return one complete JSON answer")
+        if isinstance(answers[0], dict):
+            return answers[0]
+        if not isinstance(answers[0], str):
+            raise ValueError("RocketRide returned an unexpected answer type")
         try:
             return json.loads(answers[0])
         except json.JSONDecodeError as exc:
@@ -128,8 +134,13 @@ def save_image(data, native_path, final_path):
         temporary.replace(final_path)
 
 
-async def generate_images(client, book, output, references, model=IMAGE_MODEL, quality="medium"):
+async def generate_images(client, book, output, references, model=IMAGE_MODEL, quality="medium", max_pages=None):
     queries = validate_book(book)
+    total_pages = len(queries)
+    if max_pages is not None:
+        if max_pages < 1:
+            raise ValueError("max_pages must be positive")
+        queries = queries[:max_pages]
     # Resolve IDs only through caller-supplied mappings, never model-chosen paths.
     for query in queries:
         for character in query["characters"]:
@@ -140,7 +151,7 @@ async def generate_images(client, book, output, references, model=IMAGE_MODEL, q
     prompts = output / "image-queries"
     images.mkdir(exist_ok=True)
     prompts.mkdir(exist_ok=True)
-    manifest = {"status": "generating", "story": "storybook.json", "pages": []}
+    manifest = {"status": "generating", "story": "storybook.json", "total_story_pages": total_pages, "pages": []}
     save_json(output / "manifest.json", manifest)
     previous = None
     for number, query in enumerate(queries, 1):
@@ -184,11 +195,13 @@ async def generate_images(client, book, output, references, model=IMAGE_MODEL, q
                 "native_image": str(native_path.relative_to(output)),
                 "width_px": 1440, "height_px": 900})
             save_json(output / "manifest.json", manifest)
-        except Exception:
+        except Exception as exc:
             manifest.update(status="failed", failed_page=number)
+            if hasattr(exc, "diagnostic"):
+                manifest["error"] = exc.diagnostic
             save_json(output / "manifest.json", manifest)
             raise
-    manifest["status"] = "complete"
+    manifest["status"] = "complete" if len(queries) == total_pages else "preview_complete"
     save_json(output / "manifest.json", manifest)
     return manifest
 
@@ -209,10 +222,13 @@ async def run(args):
         raise ValueError("Set OPENAI_API_KEY or ROCKETRIDE_OPENAI_KEY in .env")
     output = args.output.resolve()
     config = {"request": request, "image_model": args.image_model, "quality": args.quality,
+              "max_pages": getattr(args, "max_pages", None),
               "references": {key: {"path": str(path), "sha256": hashlib.sha256(path.read_bytes()).hexdigest()}
                              for key, path in references.items()}}
     if args.resume:
-        if json.loads((output / "run.json").read_text()) != config:
+        saved_config = json.loads((output / "run.json").read_text())
+        saved_config.setdefault("max_pages", None)
+        if saved_config != config:
             raise ValueError("Resume requires the same request, references, model and quality")
     else:
         output.mkdir(parents=True, exist_ok=False)
@@ -224,11 +240,17 @@ async def run(args):
         save_json(output / "story-query.json", prompt)
         print("Generating story...", flush=True)
         async with RocketRideClient(request_timeout=600_000) as client:
-            book = await generate_story(client, prompt)
+            book = await generate_story(client, prompt, output / "story-response.json")
         validate_book(book)
         save_json(story_path, book)
-    async with AsyncOpenAI(api_key=image_key, timeout=600, max_retries=0) as client:
-        await generate_images(client, book, output, references, args.image_model, args.quality)
+    async with RocketRideClient(request_timeout=600_000) as client:
+        started = await client.use(filepath=str(ROOT / "story-images.pipe"))
+        token = started["token"]
+        try:
+            images = RocketRideImages(client, token, image_key)
+            await generate_images(images, book, output, references, args.image_model, args.quality, getattr(args, "max_pages", None))
+        finally:
+            await client.terminate(token)
     print(f"Story and images saved: {output / 'manifest.json'}", flush=True)
 
 
@@ -240,7 +262,10 @@ def main():
     parser.add_argument("--image-model", default=IMAGE_MODEL)
     parser.add_argument("--quality", choices=("low", "medium", "high"), default="medium")
     parser.add_argument("--resume", action="store_true")
+    parser.add_argument("--max-pages", type=int, help="Generate only the first N page images for a preview")
     args = parser.parse_args()
+    if args.max_pages is not None and args.max_pages < 1:
+        parser.error("--max-pages must be positive")
     try:
         asyncio.run(run(args))
     except KeyboardInterrupt:
