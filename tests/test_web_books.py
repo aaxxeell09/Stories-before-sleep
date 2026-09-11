@@ -70,6 +70,18 @@ class BookTests(unittest.TestCase):
             self.assertEqual(error.exception.code, 404)
             error.exception.close()
 
+    def test_failure_exposes_safe_actionable_status(self):
+        self.manifest.update(failed_page=2, error={'code': 'rate_limit_exceeded', 'message': 'private-provider-details'})
+        self.save_manifest()
+        book = self.fetch(self.route)
+        self.assertEqual(book['images_ready'], 1)
+        self.assertEqual(book['failed_page'], 2)
+        self.assertIn('rate limit', book['image_error'])
+        self.assertNotIn('private-provider-details', json.dumps(book))
+        self.manifest['status'] = 'preview_complete'
+        self.save_manifest()
+        self.assertIsNone(self.fetch(self.route)['image_error'])
+
     def test_refresh_reads_newly_completed_pages(self):
         self.assertIsNone(self.fetch(self.route)['pages'][1]['image'])
         (self.folder / 'images/page-002.png').write_bytes(PNG)

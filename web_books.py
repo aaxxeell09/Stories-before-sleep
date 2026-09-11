@@ -60,7 +60,13 @@ class BookShelf:
         story = book['story']
         return {'id': identifier, 'title': story['title'], 'story': story['full_story_text'],
                 'what_we_learned': story['what_we_learned'], 'try_it_today': story.get('try_it_today', ''),
-                'status': manifest['status'], 'pages': pages}
+                'status': manifest['status'], 'pages': pages,
+                'images_ready': sum(page['image'] is not None for page in pages),
+                'failed_page': manifest.get('failed_page') if type(manifest.get('failed_page')) is int else None,
+                'image_error': ('Image generation hit the provider rate limit. Check the image account limits before retrying.'
+                                if isinstance(manifest.get('error'), dict) and manifest['error'].get('code') == 'rate_limit_exceeded'
+                                else 'Image generation failed. Check the generation logs before retrying.')
+                               if manifest['status'] == 'failed' else None}
 
     def list(self):
         books = []

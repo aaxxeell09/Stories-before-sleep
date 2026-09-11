@@ -32,7 +32,7 @@ async function refreshBooks() {
  const selected = $('saved-books').value;
  const {books} = await api('/api/books');
  $('saved-books').replaceChildren(new Option('Choose a book…', ''));
- for (const book of books) $('saved-books').add(new Option(`${book.title}${book.status === 'complete' ? '' : ' · incomplete'}`, book.id));
+ for (const book of books) $('saved-books').add(new Option(`${book.title}${book.status === 'complete' ? '' : book.status === 'preview_complete' ? ' · preview' : book.status === 'failed' ? ' · images failed' : ' · generating'}`, book.id));
  $('saved-books').value = selected;
  $('books-status').textContent = books.length ? `${books.length} saved ${books.length === 1 ? 'book' : 'books'}.` : 'Your illustrated books will appear here after generation.';
 }
@@ -42,7 +42,11 @@ async function openBook(id) {
  displayStory([book.title, book.story, 'What we learned', book.what_we_learned, book.try_it_today].filter(Boolean).join('\n\n'), 'ILLUSTRATED STORYBOOK');
  $('saved-books').value = id;
  const reader = $('story-result'); reader.replaceChildren(element('h2', book.title));
- if (book.status !== 'complete') reader.append(element('p', 'This book is incomplete. Available pages are shown below; refresh and reopen it after generation finishes.', 'book-notice'));
+ if (book.status !== 'complete') {
+  const progress = `${book.images_ready} of ${book.pages.length} illustrations available. `;
+  const detail = book.status === 'failed' ? `${book.image_error}${book.failed_page ? ' Stopped at page ' + book.failed_page + '.' : ''}` : book.status === 'preview_complete' ? 'This preview run is finished. The remaining pages have not been illustrated.' : 'Generation is in progress. Refresh and reopen the book to load finished images.';
+  reader.append(element('p', progress + detail, 'book-notice'));
+ }
  for (const page of book.pages) {
   const section = element('section', null, 'book-page');
   section.append(element('p', `PAGE ${page.page_number} OF ${book.pages.length}`, 'page-number'));
@@ -51,7 +55,7 @@ async function openBook(id) {
    image.width = 1440; image.height = 900; image.loading = 'lazy';
    image.onerror = () => { image.replaceWith(element('p', 'This page image is unavailable. The story text is below.', 'book-notice')); };
    section.append(image);
-  } else section.append(element('p', 'Illustration not available yet.', 'book-notice'));
+  } else section.append(element('p', book.status === 'failed' ? 'Illustration unavailable — generation stopped.' : book.status === 'preview_complete' ? 'Not illustrated in this preview.' : 'Illustration not available yet.', 'book-notice'));
   if (page.narration) section.append(element('p', page.narration, 'page-narration'));
   for (const line of page.dialogue) section.append(element('p', `${line.speaker}: “${line.text}”`, 'page-dialogue'));
   reader.append(section);
