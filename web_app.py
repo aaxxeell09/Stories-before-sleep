@@ -9,6 +9,8 @@ import threading
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from uuid import uuid4
 
+from web_books import BookShelf
+
 ROOT = Path(__file__).resolve().parent
 KEYS = ('ROCKETRIDE_URI', 'ROCKETRIDE_APIKEY', 'ROCKETRIDE_OPENAI_KEY')
 MEMORY_KEYS = ('COGNEE_BASE_URL', 'COGNEE_API_KEY', 'HYDRA_DB_API_KEY', 'HYDRA_DB_TENANT_ID')
@@ -51,21 +53,27 @@ def validate(data):
             raise ValueError('Choose a reading length and rhyme setting.')
         if not result['lesson']:
             raise ValueError('Add a lesson first.')
-        result.update(age=data['age'], minutes=data['minutes'], rhyme=data['rhyme'])
+        illustrated = data.get('illustrated', False)
+        if type(illustrated) is not bool:
+            raise ValueError('Illustration setting must be a boolean.')
+        if illustrated and data['age'] not in (2, 3, 4):
+            raise ValueError('Illustrated stories currently support ages 2–4.')
+        result.update(age=data['age'], minutes=data['minutes'], rhyme=data['rhyme'], illustrated=illustrated)
     elif not result['dataset'] or not result['query']:
         raise ValueError('Dataset and recall question are required.')
     return result
 
 
 class App(ThreadingHTTPServer):
-    def __init__(self, address):
+    def __init__(self, address, books_dirs=()):
         super().__init__(address, Handler)
+        self.books = BookShelf(books_dirs)
         self.jobs = {}
         self.lock = threading.Lock()
 
     def run_job(self, job_id, payload):
         try:
-            process = subprocess.run([sys.executable, str(ROOT / 'web_worker.py')], input=json.dumps(payload), text=True, capture_output=True, cwd=ROOT, timeout=1200)
+            process = subprocess.run([sys.executable, str(ROOT / 'web_worker.py')], input=json.dumps(payload), text=True, capture_output=True, cwd=ROOT, timeout=7200 if payload.get('illustrated') else 1200)
             result = json.loads(process.stdout)
             if process.returncode:
                 raise RuntimeError(result.get('error', 'Operation failed.'))
@@ -107,6 +115,19 @@ class Handler(BaseHTTPRequestHandler):
             except (OSError, ValueError, AttributeError):
                 pass
             return self.reply(200, {'generation_missing': missing(KEYS), 'memory_missing': missing(KEYS + MEMORY_KEYS), 'age': age})
+        if self.path == '/api/books':
+            return self.reply(200, {'books': self.server.books.list()})
+        if self.path.startswith('/api/books/'):
+            parts = self.path.strip('/').split('/')
+            try:
+                if len(parts) == 3:
+                    return self.reply(200, self.server.books.read(parts[2]))
+                if len(parts) == 5 and parts[3] == 'images':
+                    path = self.server.books.image(parts[2], int(parts[4]))
+                    return self.reply(200, path.read_bytes(), 'image/png')
+            except (ValueError, OSError, KeyError, TypeError):
+                pass
+            return self.reply(404, {'error': 'Book or image is unavailable.'})
         if self.path.startswith('/api/jobs/'):
             with self.server.lock:
                 job = self.server.jobs.get(self.path.split('/')[-1])
@@ -146,8 +167,9 @@ class Handler(BaseHTTPRequestHandler):
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument('--port', type=int, default=8000)
+    parser.add_argument('--books-dir', type=Path, action='append', default=[], help='Read books from this output directory (repeatable).')
     args = parser.parse_args()
-    with App(('127.0.0.1', args.port)) as server:
+    with App(('127.0.0.1', args.port), args.books_dir) as server:
         print(f'StorySprout: http://127.0.0.1:{server.server_port}', flush=True)
         try:
             server.serve_forever()

@@ -1,0 +1,225 @@
+{
+  "page": {
+    "page_number": "{{page_number}}",
+    "image_description": "{{image_description}}",
+    "narration": "{{page_narration_or_null}}",
+    "dialogue": [
+      {
+        "speaker": "{{character_name}}",
+        "text": "{{exact_dialogue_text}}"
+      }
+    ],
+    "story_moment": "{{context|problem|development|learning_moment|resolution}}"
+  },
+
+  "characters": [
+    {
+      "name": "{{character_name}}",
+      "visual_description": "{{canonical_visual_description}}",
+      "reference_image": "{{reference_image_id_or_null}}",
+      "emotion_on_page": "{{emotion}}",
+      "action_on_page": "{{character_action}}"
+    }
+  ],
+
+  "visual_continuity": {
+    "location": "{{current_location}}",
+    "important_objects": "{{objects_and_their_visual_properties}}",
+    "previous_page_context": "{{previous_visual_context}}",
+    "persistent_environment_details": "{{persistent_environment_details}}"
+  },
+
+  "image_output": {
+    "width_px": 1440,
+    "height_px": 900,
+    "aspect_ratio": "16:10",
+    "orientation": "landscape",
+    "exact_dimensions_required": true,
+    "compose_natively_for_target_dimensions": true,
+    "do_not_generate_for_another_aspect_ratio_and_crop_afterward": true
+  },
+
+  "style": {
+    "illustration_style": "{{canonical_storybook_style}}",
+    "stimulation": "low",
+    "target_age": "2-4",
+    "visual_complexity": "simple",
+    "emotional_tone": "{{page_emotional_tone}}"
+  },
+
+  "composition": {
+    "primary_focus": "{{main_character_or_action}}",
+    "canvas_width_px": 1440,
+    "canvas_height_px": 900,
+    "canvas_aspect_ratio": "16:10",
+    "text_layout": "auto",
+    "keep_text_areas_visually_simple": true,
+    "clear_character_silhouettes": true,
+    "avoid_crowded_backgrounds": true,
+    "prioritize_story_action": true,
+    "compose_scene_with_text_placement_in_mind": true,
+    "compose_all_elements_for_landscape_canvas": true,
+    "keep_important_content_inside_safe_area": true,
+    "avoid_placing_important_elements_too_close_to_edges": true
+  },
+
+  "instructions": {
+    "illustrate_exact_page_scene": true,
+
+    "story_alignment": {
+      "show_the_specific_moment_described_on_this_page": true,
+      "use_narration_and_dialogue_as_context_for_the_visual": true,
+      "do_not_attempt_to_visualize_every_sentence": true,
+      "select_one_clear_visual_moment": true,
+      "make_character_actions_and_emotions_match_the_story": true,
+      "do_not_add_story_events_not_present_on_the_page": true,
+      "do_not_show_future_story_events": true,
+      "let_the_image_carry_information_that_does_not_need_to_be_repeated_in_text": true
+    },
+
+    "character_consistency": {
+      "preserve_character_identity": true,
+      "preserve_character_species": true,
+      "preserve_character_age_and_body_proportions": true,
+      "preserve_face_and_distinguishing_features": true,
+      "preserve_clothing_and_accessories": true,
+      "preserve_character_colors": true,
+      "use_reference_image_as_primary_visual_identity_when_available": true,
+      "do_not_redesign_character_between_pages": true
+    },
+
+    "continuity": {
+      "preserve_object_continuity": true,
+      "preserve_location_continuity": true,
+      "preserve_environment_layout_when_same_location": true,
+      "preserve_recurring_object_colors_shapes_and_sizes": true,
+      "respect_previous_page_visual_context": true,
+      "do_not_introduce_unnecessary_new_objects": true,
+      "do_not_add_new_characters": true
+    },
+
+    "age_appropriate_visuals": {
+      "optimize_for_target_age": true,
+      "simple_readable_composition": true,
+      "use_clear_visual_storytelling": true,
+      "use_easily_recognizable_expressions": true,
+      "avoid_visual_clutter": true,
+      "avoid_overly_complex_background_details": true,
+      "avoid_frightening_or_intense_imagery": true,
+      "keep_emotions_gentle_and_age_appropriate": true
+    },
+
+    "style_consistency": {
+      "preserve_canonical_illustration_style": true,
+      "maintain_consistent_rendering_across_pages": true,
+      "maintain_consistent_character_rendering_across_pages": true,
+      "do_not_change_art_style_between_pages": true,
+      "avoid_unrequested_style_variations": true
+    },
+
+    "canvas_and_resolution": {
+      "generate_at_exactly_1440x900_pixels": true,
+      "use_16_10_landscape_composition": true,
+      "design_composition_specifically_for_1440x900": true,
+      "position_characters_objects_and_text_for_this_canvas": true,
+      "do_not_crop_from_square_portrait_or_other_aspect_ratio": true,
+      "do_not_stretch_or_distort_content_to_reach_target_dimensions": true,
+      "preserve_full_composition_within_final_canvas": true
+    },
+
+    "text_rendering": {
+      "use_only_text_provided_in_page_fields": true,
+      "do_not_generate_contextual_text": true,
+      "do_not_invent_narration": true,
+      "do_not_invent_dialogue": true,
+      "do_not_repeat_visual_information_unnecessarily": true,
+
+      "narration": {
+        "render_only_if_narration_is_not_null": true,
+        "copy_exactly": true,
+        "do_not_rewrite": true,
+        "do_not_summarize": true,
+        "do_not_paraphrase": true,
+        "place_separately_from_speech_bubbles": true,
+        "keep_short_and_visually_secondary_to_the_illustration": true
+      },
+
+      "speech_bubbles": {
+        "render_only_if_dialogue_exists": true,
+        "render_each_dialogue_item_in_its_own_bubble": true,
+        "render_only_the_dialogue_text": true,
+        "do_not_include_speaker_names_inside_bubbles": true,
+        "do_not_include_phrases_like_said_dino_or_said_milo": true,
+        "associate_each_bubble_with_the_correct_speaker": true,
+        "position_bubble_near_the_correct_speaker": true,
+        "use_clear_bubble_tail_toward_correct_speaker": true,
+        "do_not_cover_faces": true,
+        "do_not_cover_character_actions": true,
+        "do_not_cover_important_story_objects": true,
+        "keep_bubbles_visually_simple": true,
+        "avoid_excessive_number_of_bubbles": true
+      },
+
+      "text_fidelity": {
+        "copy_text_exactly": true,
+        "do_not_correct_or_change_wording": true,
+        "do_not_add_new_text": true,
+        "do_not_remove_words": true,
+        "preserve_punctuation": true
+      },
+
+      "typography": {
+        "large_readable_text": true,
+        "preschool_friendly_typography": true,
+        "high_contrast_against_background": true,
+        "simple_clean_font_style": true,
+        "avoid_decorative_or_complex_letterforms": true,
+        "avoid_text_over_busy_backgrounds": true
+      }
+    },
+
+    "page_text_behavior": {
+      "allow_narration_only_pages": true,
+      "allow_dialogue_only_pages": true,
+      "allow_pages_with_both_when_both_are_provided": true,
+      "allow_pages_with_no_text_when_both_are_null_or_empty": true,
+      "do_not_force_narration_onto_every_page": true,
+      "do_not_force_dialogue_onto_every_page": true,
+      "avoid_redundant_text_between_narration_dialogue_and_image": true
+    },
+
+    "general": {
+      "prioritize_natural_visual_storytelling_over_explicitly_showing_every_input": true,
+      "integrate_text_and_illustration_as_one_cohesive_storybook_page": true,
+      "keep_the_page_visually_light_and_easy_to_read": true,
+      "avoid_forced_visual_elements": true,
+      "add_new_characters": false
+    }
+  },
+
+  "output_format": {
+    "format": "finished_storybook_page",
+    "width_px": 1440,
+    "height_px": 900,
+    "aspect_ratio": "16:10",
+    "orientation": "landscape",
+    "instructions": [
+      "Return one finished illustrated storybook page.",
+      "The final image must be exactly 1440x900 pixels.",
+      "Use a 16:10 landscape canvas.",
+      "Compose the page natively for 1440x900 rather than generating another aspect ratio and cropping, stretching, or adapting it afterward.",
+      "Keep all important characters, objects, actions, narration, and speech bubbles safely inside the 1440x900 canvas.",
+      "Render narration only when a non-null narration value is provided.",
+      "Render dialogue only when dialogue items are provided.",
+      "Speech bubbles must contain only the exact spoken words, never speaker labels or phrases such as 'said Dino'.",
+      "Do not create contextual text, explanatory captions, or additional narration.",
+      "Do not repeat in text information that the illustration already communicates unless that exact text was explicitly provided.",
+      "Do not force every page to contain both narration and speech bubbles.",
+      "Keep all rendered text large, clean, readable, and suitable for a child aged 2-4.",
+      "Do not allow text or speech bubbles to cover faces, important actions, or important story objects.",
+      "The illustration must communicate one clear story moment at a glance.",
+      "Maintain visual continuity with established characters, objects, locations, and illustration style.",
+      "The final result should look like a professionally designed page from a coherent multi-page children's picture book."
+    ]
+  }
+}

@@ -41,6 +41,7 @@ class WebTests(unittest.TestCase):
             with self.assertRaises(HTTPError) as error:
                 urlopen(request)
             self.assertIn(error.exception.code, (403, 404))
+            error.exception.close()
 
     def test_missing_configuration(self):
         data = dict(kind='generate', age=3, minutes=2, rhyme=False, lesson='Sharing')
@@ -48,6 +49,7 @@ class WebTests(unittest.TestCase):
             with self.assertRaises(HTTPError) as error:
                 urlopen(Request(self.url + '/api/jobs', data=json.dumps(data).encode(), headers={'Content-Type':'application/json'}))
             self.assertEqual(error.exception.code, 400)
+            error.exception.close()
 
     def test_worker_success_and_failure(self):
         from types import SimpleNamespace

@@ -1,2 +1,5 @@
 rocketride==1.3.0
 hydradb-sdk==2.1.4
+openai>=2,<3
+Pillow>=12,<13
+python-dotenv>=1,<2
