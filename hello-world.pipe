@@ -1,0 +1,34 @@
+{
+  "project_id": "33fba54c-faea-4fb1-bf67-d87c0a961a45",
+  "version": 1,
+  "source": "input",
+  "components": [
+    {
+      "id": "input",
+      "provider": "webhook",
+      "config": {
+        "hideForm": true,
+        "mode": "Source",
+        "parameters": {},
+        "type": "webhook"
+      }
+    },
+    {
+      "id": "model",
+      "provider": "llm_openai",
+      "config": {
+        "profile": "openai-4o-mini",
+        "openai-4o-mini": {
+          "apikey": "${ROCKETRIDE_OPENAI_KEY}"
+        }
+      },
+      "input": [{ "lane": "questions", "from": "input" }]
+    },
+    {
+      "id": "output",
+      "provider": "response_answers",
+      "config": { "laneName": "answers" },
+      "input": [{ "lane": "answers", "from": "model" }]
+    }
+  ]
+}
