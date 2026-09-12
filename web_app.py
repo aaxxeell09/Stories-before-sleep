@@ -9,6 +9,8 @@ import threading
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from uuid import uuid4
 
+from dotenv import dotenv_values
+
 from web_books import BookShelf
 
 ROOT = Path(__file__).resolve().parent
@@ -17,14 +19,13 @@ MEMORY_KEYS = ('COGNEE_BASE_URL', 'COGNEE_API_KEY', 'HYDRA_DB_API_KEY', 'HYDRA_D
 
 
 def config():
-    values = {}
-    path = ROOT / '.env'
-    if path.exists():
-        for line in path.read_text().splitlines():
-            if '=' in line and not line.lstrip().startswith('#'):
-                key, value = line.split('=', 1)
-                values[key.strip()] = value.strip().strip('\"\'')
+    values = {key: value for key, value in dotenv_values(ROOT / '.env').items()
+              if value is not None}
     values.update(os.environ)
+    values.update({key: value for key, value in dotenv_values(Path.home() / '.hackathonenv').items()
+                   if value is not None})
+    if values.get('OPENAI_API_KEY'):
+        values['ROCKETRIDE_OPENAI_KEY'] = values['OPENAI_API_KEY']
     return values
 
 
@@ -73,7 +74,7 @@ class App(ThreadingHTTPServer):
 
     def run_job(self, job_id, payload):
         try:
-            process = subprocess.run([sys.executable, str(ROOT / 'web_worker.py')], input=json.dumps(payload), text=True, capture_output=True, cwd=ROOT, timeout=7200 if payload.get('illustrated') else 1200)
+            process = subprocess.run([sys.executable, str(ROOT / 'web_worker.py')], input=json.dumps(payload), text=True, capture_output=True, cwd=ROOT, env=config(), timeout=7200 if payload.get('illustrated') else 1200)
             result = json.loads(process.stdout)
             if process.returncode:
                 raise RuntimeError(result.get('error', 'Operation failed.'))
@@ -150,7 +151,7 @@ class Handler(BaseHTTPRequestHandler):
             payload = validate(json.loads(self.rfile.read(length)))
             absent = missing(KEYS if payload['kind'] == 'generate' else KEYS + MEMORY_KEYS)
             if absent:
-                raise ValueError('Configure these values in .env: ' + ', '.join(absent))
+                raise ValueError('Configure these values in ~/.hackathonenv or .env: ' + ', '.join(absent))
         except (ValueError, UnicodeError) as exc:
             return self.reply(400, {'error': str(exc)})
         with self.server.lock:

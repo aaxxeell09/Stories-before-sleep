@@ -2,7 +2,7 @@ const $ = (id) => document.getElementById(id);
 let currentStory = '', activeView = 'story', settings;
 const sample = 'The Little Shell Boat\n\nFinn the clownfish found a shiny shell. “A boat!” he said, pushing it through the water.\n\nSquid wanted a turn. Finn held the shell close. “But I just found it.”\n\nSquid waited quietly. The little boat did not feel quite as fun all alone.\n\n“You can sail it to the rock,” Finn said. “Then it’s my turn again.”\n\nSquid gave the shell a gentle push. Finn made tiny waves. Together, they sailed all the way home.\n\nWhat we learned\nTaking turns gives everyone a chance to have fun.';
 function displayStory(text, label) { currentStory = text; $('story-result').textContent = text; $('story-result').hidden = false; $('empty').hidden = true; $('story-label').textContent = label; $('download').disabled = false; $('use-story').disabled = false; }
-function showSetup() { if (!settings) return; const missing = activeView === 'story' ? settings.generation_missing : settings.memory_missing; $('setup').hidden = !missing.length; $('setup').textContent = `Setup needed: add ${missing.join(', ')} to .env, then refresh. You can read the example story while you set up.`; }
+function showSetup() { if (!settings) return; const missing = activeView === 'story' ? settings.generation_missing : settings.memory_missing; $('setup').hidden = !missing.length; $('setup').textContent = `Setup needed: add ${missing.join(', ')} to ~/.hackathonenv (or .env), then refresh. You can read the example story while you set up.`; }
 for (const view of ['story', 'memory']) $(view + '-tab').onclick = () => { activeView = view; for (const other of ['story', 'memory']) { $(other + '-view').hidden = other !== view; $(other + '-tab').classList.toggle('active', other === view); $(other + '-tab').setAttribute('aria-pressed', String(other === view)); } showSetup(); };
 document.querySelectorAll('[data-lesson]').forEach(button => button.onclick = () => { $('lesson').value = button.dataset.lesson; });
 $('sample').onclick = () => displayStory(sample, 'EXAMPLE STORY · NOT GENERATED');
@@ -12,7 +12,12 @@ async function api(url, options) { const response = await fetch(url, options); c
 async function submit(kind, payload) {
  const view = kind === 'generate' ? 'story' : 'memory', status = $(view + '-status');
  const buttons = document.querySelectorAll('button[type=submit]'); buttons.forEach(b => b.disabled = true);
+ const submitButton = document.querySelector(`#${view}-form button[type=submit]`), originalLabel = submitButton.innerHTML, started = Date.now();
+ submitButton.textContent = kind === 'generate' ? 'Generating…' : 'Working…';
+ submitButton.setAttribute('aria-busy', 'true');
  status.className = ''; status.textContent = kind === 'generate' ? (payload.illustrated ? 'Writing and illustrating your book… This can take several minutes. Finished pages are saved as they arrive.' : 'Writing your story… This may take a minute.') : 'Recalling, transferring, and verifying… This can take several minutes.';
+ const initialStatus = status.textContent;
+ const timer = setInterval(() => { const seconds = Math.floor((Date.now() - started) / 1000); status.textContent = `${initialStatus} Elapsed: ${Math.floor(seconds / 60)}m ${seconds % 60}s.`; }, 1000);
  if (view === 'memory') $('memory-result').hidden = true;
  try {
   const job = await api('/api/jobs', {method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({kind, ...payload})});
@@ -22,7 +27,7 @@ async function submit(kind, payload) {
   if (kind === 'generate') { if (result.result.book_id) { await refreshBooks(); await openBook(result.result.book_id); } else { displayStory(result.result.story, 'TONIGHT’S STORY'); } status.textContent = 'Ready to read together.'; }
   else { $('memory-result').textContent = JSON.stringify(result.result.report, null, 2); $('memory-result').hidden = false; status.textContent = result.result.report.verified ? 'Verified: the lesson and supporting quote were independently retrieved from HydraDB.' : 'The transfer could not be verified.'; }
  } catch (error) { status.className = 'error'; status.textContent = error.message; }
- finally { buttons.forEach(b => b.disabled = false); }
+ finally { clearInterval(timer); submitButton.innerHTML = originalLabel; submitButton.removeAttribute('aria-busy'); buttons.forEach(b => b.disabled = false); }
 }
 $('story-form').onsubmit = event => { event.preventDefault(); submit('generate', {age:Number($('age').value), minutes:Number($('minutes').value), rhyme:$('rhyme').checked, illustrated:$('illustrated').checked, lesson:$('lesson').value, characters:$('characters').value}); };
 $('memory-form').onsubmit = event => { event.preventDefault(); submit('memory', {dataset:$('dataset').value, query:$('query').value, story:$('seed').value}); };
