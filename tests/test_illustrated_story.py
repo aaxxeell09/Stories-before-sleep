@@ -36,7 +36,7 @@ def book_fixture():
             'visual_bible': {'illustration_style': 'Watercolor'}, 'pages': pages}
 
 
-def image_result(size=(1536, 960)):
+def image_result(size=(1536, 1024)):
     data = io.BytesIO()
     Image.new('RGB', size, 'blue').save(data, format='PNG')
     return SimpleNamespace(data=[SimpleNamespace(b64_json=base64.b64encode(data.getvalue()).decode())])
@@ -97,16 +97,28 @@ class PipelineTests(unittest.IsolatedAsyncioTestCase):
                 self.assertEqual(call.kwargs['node_id'], 'openai_images')
                 self.assertEqual(call.kwargs['tool'], 'http_request')
                 body = call.kwargs['input']['body_json']
-                self.assertEqual(body['tools'][0]['size'], '1536x960')
+                self.assertEqual(body['tools'][0]['size'], '1536x1024')
                 self.assertEqual(body['tool_choice'], {'type': 'image_generation'})
                 self.assertTrue(body['input'][0]['content'][1]['image_url'].startswith('data:image/png;base64,'))
             self.assertEqual(len(calls[1].kwargs['input']['body_json']['input'][0]['content']), 3)
+
+    async def test_rocketride_generation_uses_images_endpoint(self):
+        encoded = image_result().data[0].b64_json
+        client = SimpleNamespace(tool=AsyncMock(return_value={
+            'status_code': 200, 'json': {'data': [{'b64_json': encoded}]}}))
+        adapter = pipeline.RocketRideImages(client, 'test-token', 'test-key')
+        result = await adapter.generate(model=pipeline.IMAGE_MODEL, prompt='A sea otter',
+            size='1536x1024', quality='low', output_format='png', n=1)
+        request = client.tool.call_args.kwargs['input']
+        self.assertEqual(request['url'], 'https://api.openai.com/v1/images/generations')
+        self.assertEqual(request['body_json']['model'], 'gpt-image-1.5')
+        self.assertEqual(result.data[0].b64_json, encoded)
 
     async def test_rocketride_http_failure_is_not_an_image(self):
         client = SimpleNamespace(tool=AsyncMock(return_value={'status_code': 403, 'body': 'private error'}))
         adapter = pipeline.RocketRideImages(client, 'test-token', 'test-key')
         with self.assertRaisesRegex(RuntimeError, 'HTTP 403'):
-            await adapter.generate(model='test', prompt='test', size='1536x960', quality='low', output_format='png', n=1)
+            await adapter.generate(model='test', prompt='test', size='1536x1024', quality='low', output_format='png', n=1)
 
     async def test_story_query_and_session_cleanup(self):
         client = SimpleNamespace(use=AsyncMock(return_value={'token': 'session'}),
@@ -144,11 +156,11 @@ class PipelineTests(unittest.IsolatedAsyncioTestCase):
                 with Image.open(output / page['image']) as image:
                     self.assertEqual(image.size, (1440, 900))
                 with Image.open(output / page['native_image']) as image:
-                    self.assertEqual(image.size, (1536, 960))
+                    self.assertEqual(image.size, (1536, 1024))
             prompt = json.loads((output / 'image-queries/page-001.json').read_text())
             self.assertIsNone(prompt['page']['narration'])
             self.assertEqual(prompt['page']['dialogue'][0]['text'], 'Hello, moon!')
-            self.assertEqual(prompt['image_output']['height_px'], 960)
+            self.assertEqual(prompt['image_output']['height_px'], 1024)
             (output / 'images/page-002.png').unlink()
             await pipeline.generate_images(client, book, output, {})
             self.assertTrue((output / 'images/page-002.png').exists())
@@ -176,7 +188,7 @@ class PipelineTests(unittest.IsolatedAsyncioTestCase):
         client = SimpleNamespace(images=SimpleNamespace(generate=AsyncMock(return_value=image_result((1024, 1024)))))
         with tempfile.TemporaryDirectory() as directory:
             output = Path(directory)
-            with self.assertRaisesRegex(ValueError, 'Expected a 1536x960'):
+            with self.assertRaisesRegex(ValueError, 'Expected a 1536x1024'):
                 await pipeline.generate_images(client, book_fixture(), output, {})
             self.assertFalse((output / 'images/page-001.png').exists())
             book = book_fixture()

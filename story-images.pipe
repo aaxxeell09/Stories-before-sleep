@@ -21,7 +21,7 @@
         "allowDELETE": false,
         "allowHEAD": false,
         "allowOPTIONS": false,
-        "urlWhitelist": [{"whitelistPattern": "^https://api\\.openai\\.com/v1/responses$"}],
+        "urlWhitelist": [{"whitelistPattern": "^https://api\\.openai\\.com/v1/(responses|images/generations)$"}],
         "maxConcurrentRequests": 1
       },
       "control": [{"classType": "tool", "from": "input"}]
