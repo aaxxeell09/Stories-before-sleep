@@ -12,7 +12,7 @@ from contextlib import ExitStack
 from pathlib import Path
 
 from dotenv import load_dotenv
-from PIL import Image
+from PIL import Image, ImageOps
 from rocketride import RocketRideClient
 from rocketride.schema import Question
 
@@ -21,9 +21,9 @@ from scripts.rocketride_images import RocketRideImages
 
 
 ROOT = Path(__file__).resolve().parent
-NATIVE_SIZE = (1536, 960)
+NATIVE_SIZE = (1536, 1024)
 FINAL_SIZE = (1440, 900)
-IMAGE_MODEL = "gpt-image-2.5-flare"
+IMAGE_MODEL = "gpt-image-1.5"
 
 
 def save_json(path, value):
@@ -99,23 +99,23 @@ def validate_book(book):
 
 def native_prompt(query):
     # Keep the supplied template intact. Adapt the concrete image request to the
-    # approved native size; the final 1440x900 copy is resized locally afterward.
+    # supported native size; the final 1440x900 copy is fitted locally afterward.
     def adapt(value):
         if isinstance(value, dict):
             return {k: adapt(v) for k, v in value.items()}
         if isinstance(value, list):
             return [adapt(v) for v in value]
         if isinstance(value, str):
-            return value.replace("1440x900", "1536x960")
+            return value.replace("1440x900", "1536x1024").replace("16:10", "3:2")
         if type(value) is int:
-            return {1440: 1536, 900: 960}.get(value, value)
+            return {1440: 1536, 900: 1024}.get(value, value)
         return value
     result = copy.deepcopy(query)
     # Never change page text, character descriptions, or continuity data.
     for key in ("image_output", "composition", "instructions", "output_format"):
         result[key] = adapt(result[key])
     result["instructions"]["canvas_and_resolution"] = {
-        key.replace("1440x900", "1536x960"): value
+        key.replace("1440x900", "1536x1024"): value
         for key, value in result["instructions"]["canvas_and_resolution"].items()
     }
     return result
@@ -124,13 +124,13 @@ def native_prompt(query):
 def save_image(data, native_path, final_path):
     with Image.open(io.BytesIO(data)) as image:
         image.load()
-        if image.format != "PNG" or image.size != NATIVE_SIZE:
+        if image.format != "PNG" or image.size not in (NATIVE_SIZE, (1536, 960)):
             raise ValueError(f"Expected a {NATIVE_SIZE[0]}x{NATIVE_SIZE[1]} PNG, received {image.format} {image.size}")
         native_temporary = native_path.with_suffix(".tmp")
         native_temporary.write_bytes(data)
         native_temporary.replace(native_path)
         temporary = final_path.with_suffix(".tmp")
-        image.resize(FINAL_SIZE, Image.Resampling.LANCZOS).save(temporary, format="PNG")
+        ImageOps.pad(image, FINAL_SIZE, method=Image.Resampling.LANCZOS, color="white").save(temporary, format="PNG")
         temporary.replace(final_path)
 
 
@@ -166,7 +166,7 @@ async def generate_images(client, book, output, references, model=IMAGE_MODEL, q
                 save_image(native_path.read_bytes(), native_path, final_path)
             else:
                 kwargs = dict(model=model, prompt=json.dumps(prompt, ensure_ascii=False),
-                              size="1536x960", quality=quality, output_format="png", n=1)
+                              size="1536x1024", quality=quality, output_format="png", n=1)
                 paths = []
                 labels = []
                 for character in query["characters"]:
@@ -207,6 +207,7 @@ async def generate_images(client, book, output, references, model=IMAGE_MODEL, q
 
 
 async def run(args):
+    load_dotenv(Path.home() / ".hackathonenv", override=True)
     load_dotenv(ROOT / ".env")
     request = json.loads(args.request.read_text())
     prompt = make_story_prompt(request)
@@ -219,7 +220,7 @@ async def run(args):
             references[ref] = path
     image_key = os.getenv("OPENAI_API_KEY") or os.getenv("ROCKETRIDE_OPENAI_KEY")
     if not image_key:
-        raise ValueError("Set OPENAI_API_KEY or ROCKETRIDE_OPENAI_KEY in .env")
+        raise ValueError("Set OPENAI_API_KEY or ROCKETRIDE_OPENAI_KEY in ~/.hackathonenv or .env")
     output = args.output.resolve()
     config = {"request": request, "image_model": args.image_model, "quality": args.quality,
               "max_pages": getattr(args, "max_pages", None),

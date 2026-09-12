@@ -48,9 +48,14 @@ class RocketRideImages:
             'tool_choice': {'type': 'image_generation'},
             'parallel_tool_calls': False,
         }
+        url = 'https://api.openai.com/v1/responses'
+        if not content:
+            url = 'https://api.openai.com/v1/images/generations'
+            body = dict(model=model, prompt=prompt, size=size, quality=quality,
+                        output_format=output_format, n=n)
         response = await self.client.tool(
             token=self.token, node_id='openai_images', tool='http_request', timeout=360_000,
-            input={'url': 'https://api.openai.com/v1/responses', 'method': 'POST',
+            input={'url': url, 'method': 'POST',
                    'bearer_token': self.api_key, 'body_json': body, 'timeout': 300})
         if not isinstance(response, dict) or response.get('status_code') != 200:
             status = response.get('status_code', 'unknown') if isinstance(response, dict) else 'unknown'
@@ -71,6 +76,11 @@ class RocketRideImages:
                 'request_id': clean(headers.get('x-request-id')),
             })
         payload = response.get('json')
+        if not content:
+            data = payload.get('data', []) if isinstance(payload, dict) else []
+            if len(data) != 1 or not data[0].get('b64_json'):
+                raise RuntimeError('Expected one base64 image from RocketRide')
+            return SimpleNamespace(data=[SimpleNamespace(b64_json=data[0]['b64_json'])])
         if not isinstance(payload, dict) or payload.get('status') != 'completed':
             raise RuntimeError('OpenAI image response did not complete')
         calls = [item for item in payload.get('output', []) if item.get('type') == 'image_generation_call']

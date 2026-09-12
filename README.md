@@ -267,21 +267,26 @@ The imported CLI supports resuming with the original request and settings:
 # If needed, rerun that exact command with --resume.
 ```
 
+The illustrated runner loads `~/.hackathonenv` before the project `.env`.
 For image calls, `OPENAI_API_KEY` is used when set; otherwise the runner uses
 `ROCKETRIDE_OPENAI_KEY`. Character reference uploads remain a CLI feature.
 
 Image generation now runs through `story-images.pipe`: the runner invokes
-RocketRide's HTTP tool, which sends an OpenAI Responses API request with a forced
-image-generation tool. The pipe allows only POST requests to that endpoint.
+RocketRide's HTTP tool sends requests using `gpt-image-1.5`. Pages without
+reference images use `/v1/images/generations`; pages with references use
+`/v1/responses` with a forced image-generation tool. The pipe allows only POST
+requests to these two endpoints.
 The runtime needs `tool_http_request` and direct SDK tool dispatch support.
 Character references and the previous page are supplied as image inputs; returned
-image bytes are saved and resized locally. No local OpenAI SDK call is made.
+image bytes are saved locally at 1536×1024 and fitted into a 1440×900 canvas
+with white side margins, preserving proportions and all text. Older 1536×960
+originals can still be resumed. No local OpenAI SDK call is made.
 
 Add `--max-pages 1` for a single-image preview. The story remains complete, while
 the manifest records `preview_complete` if only some page images were requested.
 Resuming also supports run files created before this option existed.
 
 Provider errors now retain their code, message and request ID in the manifest,
-with API keys redacted. Live testing generated a story and confirmed that image
-requests reach OpenAI through RocketRide, but image retrieval remains unverified:
-the tested organization returned HTTP 429 with a zero image-model rate limit.
+with API keys redacted. A live single-page test with `gpt-image-1.5` successfully
+generated and retrieved the first page of a saved story through RocketRide.
+The reference-image route is covered by unit tests but has not yet been verified live.
